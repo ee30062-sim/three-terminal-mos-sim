@@ -122,18 +122,18 @@ function arrow(x,x0,y0,x1,y1,c,both){ line(x,[[x0,y0],[x1,y1]],{c:c,w:1.1}); con
 // ------------------------------------------------------------------ device drawing
 function drawDev(st){
   const [x,w,h]=prep($('cDev'));
-  const L=w-150, X0=130, Y0=95, H=150;     // body box
+  const L=w-175, X0=160, Y0=95, H=150;     // body box
   const sc=H/0.30e-4;                         // px per cm (0.30 µm full height)
   const xg0=X0+0.24*L, xg1=X0+L-6;
   // circuit
   const Gx=(xg0+xg1)/2, Cx=X0+0.09*L, By=Y0+H+30;
-  line(x,[[Gx,Y0-26],[Gx,Y0-48],[30,Y0-48],[30,By],[X0+L/2,By],[X0+L/2,Y0+H+6]],{c:'#000',w:1.1});
-  line(x,[[Cx,Y0-8],[Cx,Y0-30],[85,Y0-30],[85,By]],{c:'#000',w:1.1});
+  line(x,[[Gx,Y0-26],[Gx,Y0-48],[60,Y0-48],[60,By],[X0+L/2,By],[X0+L/2,Y0+H+6]],{c:'#000',w:1.1});
+  line(x,[[Cx,Y0-8],[Cx,Y0-30],[118,Y0-30],[118,By]],{c:'#000',w:1.1});
   const src=(cx,cy,lab,val)=>{ x.save(); x.fillStyle='#fff'; x.strokeStyle='#000'; x.lineWidth=1.1; x.beginPath(); x.arc(cx,cy,11,0,7); x.fill(); x.stroke(); x.restore(); txt(x,'+',cx,cy-4,{a:'center',s:10}); txt(x,'−',cx,cy+5,{a:'center',s:10}); txt(x,lab,cx-14,cy-8,{a:'right',s:11,b:1}); txt(x,val,cx-14,cy+7,{a:'right',s:10,c:'#1f8dd6'}); };
-  if(st.mode==='B'){ src(30,Y0+70,'V_GB'.replace('_',''),st.vgb.toFixed(2)+' V'); src(85,Y0+105,'VCB',st.vcb.toFixed(2)+' V'); }
+  if(st.mode==='B'){ src(60,Y0+70,'VGB',st.vgb.toFixed(2)+' V'); src(118,Y0+105,'VCB',st.vcb.toFixed(2)+' V'); }
   else { // common C: V_GC between C-node and gate
-    line(x,[[30,Y0-48],[30,Y0+60]],{c:'#000',w:1.1}); src(30,Y0+20,'VGC',(st.vgb-st.vcb).toFixed(2)+' V'); src(85,Y0+105,'VCB',st.vcb.toFixed(2)+' V');
-    line(x,[[30,Y0+50],[85,Y0+50]],{c:'#000',w:1.1}); }
+    line(x,[[60,Y0-48],[60,Y0+60]],{c:'#000',w:1.1}); src(60,Y0+20,'VGC',(st.vgb-st.vcb).toFixed(2)+' V'); src(118,Y0+105,'VCB',st.vcb.toFixed(2)+' V');
+    line(x,[[60,Y0+50],[118,Y0+50]],{c:'#000',w:1.1}); }
   // body
   x.fillStyle='#eeeeee'; x.fillRect(X0,Y0,L,H); x.strokeStyle='#000'; x.lineWidth=1; x.strokeRect(X0,Y0,L,H);
   x.fillStyle='#c8c8c8'; x.fillRect(X0,Y0+H,L,6); x.strokeRect(X0,Y0+H,L,6);
@@ -166,7 +166,7 @@ function drawDev(st){
   const term=(tx,ty,s)=>{ x.fillStyle='#fff'; x.beginPath(); x.arc(tx,ty,8,0,7); x.fill(); x.stroke(); txt(x,s,tx,ty,{a:'center',s:10,b:1}); };
   term(Gx,Y0-37,'G'); term(Cx,Y0-19,'C'); term(X0+L/2,Y0+H+18,'B');
   txt(x,'p',X0+L-14,Y0+H-14,{it:1,s:13});
-  txt(x,'x_d = '+(xdOf(st.ps)*1e4).toFixed(3)+' µm',xg1-4,Y0+Math.max(xd,10)+11,{a:'right',s:10,c:'#1f8dd6'});
+  txt(x,'xd = '+(xdOf(st.ps)*1e4).toFixed(3)+' µm',xg1-4,Y0+Math.max(xd,10)+11,{a:'right',s:10,c:'#1f8dd6'});
 }
 // ------------------------------------------------------------------ barrier along the surface
 function drawBar(st){
@@ -186,7 +186,7 @@ function drawBar(st){
   line(x,[[l+0.05*(r-l),Y(-st.vcb)],[xa-6,Y(-st.vcb)]],{c:'#d0312d',w:.8,d:[2,3]});
   const bar=Vbi+st.vcb-st.ps;
   arrow(x,xa,Y(-st.vcb),xa,Y(surf0),'#1f4e99',true);
-  txt(x,'barrier = '+bar.toFixed(2)+' eV',xa+6,(Y(-st.vcb)+Y(surf0))/2,{c:'#1f4e99',b:1});
+  txt(x,'barrier = '+bar.toFixed(2)+' eV',xa+6,Math.min((Y(-st.vcb)+Y(surf0))/2, Y(surf0)-22),{c:'#1f4e99',b:1});
   if(st.vcb>0.005){ const xc=l+0.08*(r-l); arrow(x,xc,Y(0),xc,Y(-st.vcb),'#d0312d',true); txt(x,'eV_CB'.replace('_',''),xc+6,(Y(0)+Y(-st.vcb))/2,{c:'#d0312d'}); line(x,[[l,Y(0)],[l+0.3*(r-l),Y(0)]],{c:'#d0312d',w:.6,d:[3,3]}); }
   // electron dots: density ~ exp(-barrier/kT) (log scale count)
   const lg=Math.max(0,Math.min(1,(Math.log10(Math.max(st.ns,1))-4)/16));
