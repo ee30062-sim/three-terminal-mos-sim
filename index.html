@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Three-Terminal MOS Structure Simulator</title>
+<style>
+  :root { --navy:#004187; --blue:#1f8dd6; --red:#d0312d; --ink:#3c3c3b; --grey:#8c8c8c; --line:#d9d9d9; --panel:#ffffff; --bg:#f4f6f9; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font-family:Arial, Helvetica, sans-serif; font-size:13px; }
+  header { display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; padding:10px 16px 6px; }
+  header h1 { margin:0; font-size:20px; color:var(--navy); }
+  header .sub { color:var(--ink); font-size:12px; }
+  header .badge { margin-left:auto; background:#e8f0fa; color:var(--navy); border:1px solid #b9cfe8; border-radius:4px; padding:4px 10px; font-weight:bold; font-size:12px; }
+  .grid { display:grid; grid-template-columns: 1.15fr 1fr 1fr; grid-template-rows:auto auto; gap:8px; padding:0 12px 12px; }
+  .panel { background:var(--panel); border:1px solid var(--line); border-radius:4px; padding:6px 8px 8px; position:relative; min-width:0; }
+  .panel h2 { margin:0 0 4px; font-size:10.5px; letter-spacing:.06em; color:var(--grey); font-weight:bold; text-transform:uppercase; }
+  canvas { width:100%; display:block; }
+  .readout table { width:100%; border-collapse:collapse; font-size:12px; }
+  .readout td { padding:3px 4px; border-bottom:1px solid #eee; }
+  .readout td.v { text-align:right; font-weight:bold; color:#222; font-variant-numeric:tabular-nums; }
+  .mode { display:inline-block; background:var(--navy); color:#fff; border-radius:10px; padding:2px 10px; font-weight:bold; font-size:12px; }
+  .row { display:flex; align-items:center; gap:8px; margin:6px 0; flex-wrap:wrap; }
+  .row label { min-width:58px; font-weight:bold; }
+  input[type=range] { flex:1; min-width:140px; accent-color:var(--navy); }
+  .val { min-width:64px; text-align:right; font-weight:bold; color:var(--navy); font-variant-numeric:tabular-nums; }
+  button { font:inherit; border:1px solid var(--navy); color:var(--navy); background:#fff; border-radius:4px; padding:4px 9px; cursor:pointer; }
+  button:hover { background:#eef4fb; }
+  button.on { background:var(--navy); color:#fff; }
+  button.warn { border-color:var(--red); color:var(--red); }
+  .seg button { border-radius:0; margin-left:-1px; }
+  .seg button:first-child { border-radius:4px 0 0 4px; }
+  .seg button:last-child { border-radius:0 4px 4px 0; }
+  .note { color:var(--grey); font-size:11px; }
+  details { margin-top:6px; font-size:12px; }
+  details li { margin:3px 0; }
+  .tabs { position:absolute; top:4px; right:8px; }
+  .tabs button { padding:1px 7px; font-size:11px; }
+  .eq { font-family: "Cambria Math", "Times New Roman", serif; font-size:13px; }
+  @media (max-width: 1100px) { .grid { grid-template-columns:1fr; } }
+  sub { font-size:75%; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Three-Terminal MOS Structure</h1>
+  <span class="sub">Lecture 6-1 · Al gate / SiO<sub>2</sub> (t<sub>ox</sub> = 10 nm) / p-Si (N<sub>a</sub> = 10<sup>17</sup> cm<sup>−3</sup>) with an n<sup>+</sup> contact C · T = 300 K</span>
+  <span class="badge" id="badge">—</span>
+</header>
+<div class="grid">
+  <div class="panel"><h2>Device and circuit</h2><canvas id="cDev" height="300"></canvas>
+    <div class="note">⊖ ionized acceptor · <span style="color:#1f4e99">▬</span> inversion electrons (density ∝ |Q′<sub>inv</sub>|) · <span style="color:#d0312d">+</span> gate charge</div></div>
+  <div class="panel"><h2>Barrier along the surface (n<sup>+</sup> → p)</h2><canvas id="cBar" height="300"></canvas>
+    <div class="note">Grey: the same φ<sub>s</sub> with V<sub>CB</sub> = 0. Barrier for electrons = e(V<sub>bi</sub> + V<sub>CB</sub> − φ<sub>s</sub>).</div></div>
+  <div class="panel readout"><h2>Readout</h2>
+    <table>
+      <tr><td>V<sub>GB</sub></td><td class="v" id="rVGB"></td><td>V<sub>CB</sub></td><td class="v" id="rVCB"></td></tr>
+      <tr><td>V<sub>GC</sub> = V<sub>GB</sub> − V<sub>CB</sub></td><td class="v" id="rVGC"></td><td>φ<sub>s</sub></td><td class="v" id="rPs"></td></tr>
+      <tr><td>φ<sub>s</sub> − V<sub>CB</sub></td><td class="v" id="rPsC"></td><td>n<sub>surface</sub></td><td class="v" id="rNs"></td></tr>
+      <tr><td>Q′<sub>inv</sub></td><td class="v" id="rQi"></td><td>Q′<sub>dep</sub></td><td class="v" id="rQd"></td></tr>
+      <tr><td>x<sub>d</sub> (gate)</td><td class="v" id="rXd"></td><td>barrier</td><td class="v" id="rBar"></td></tr>
+      <tr><td>V<sub>LB</sub> (φ<sub>s</sub> = φ<sub>fp</sub>+V<sub>CB</sub>)</td><td class="v" id="rVLB"></td><td>V<sub>MB</sub> (φ<sub>s</sub> = 2φ<sub>fp</sub>+V<sub>CB</sub>)</td><td class="v" id="rVMB"></td></tr>
+    </table>
+    <div class="row" style="margin-top:8px">Mode: <span class="mode" id="rMode">—</span></div>
+    <div class="eq" id="rEq" style="margin-top:4px"></div>
+    <div class="note" style="margin-top:6px">n<sub>surface</sub> = N<sub>a</sub> exp{e[φ<sub>s</sub> − (2φ<sub>fp</sub> + V<sub>CB</sub>)]/kT}:
+      what counts is φ<sub>s</sub> − V<sub>CB</sub>, not φ<sub>s</sub> itself.</div>
+  </div>
+  <div class="panel"><h2>Energy bands vs. depth</h2><canvas id="cBand" height="300"></canvas>
+    <div class="note">E<sub>Fp</sub> stays at its bulk value; E<sub>Fn</sub> is set by the n<sup>+</sup> region (lowered by eV<sub>CB</sub>). Depletion approximation, not to scale.</div></div>
+  <div class="panel"><h2>Plots vs. V<sub>GB</sub></h2>
+    <div class="tabs seg" id="tabs">
+      <button data-k="ps" class="on">φ<sub>s</sub></button><button data-k="lq">log|Q′<sub>inv</sub>|</button><button data-k="q">|Q′<sub>inv</sub>|</button><button data-k="c">C′/C<sub>ox</sub></button>
+    </div>
+    <canvas id="cPlot" height="300"></canvas>
+    <div class="note">Solid: present V<sub>CB</sub>; dashed: V<sub>CB</sub> = 0 (two-terminal). ● = present bias.</div></div>
+  <div class="panel"><h2>Controls</h2>
+    <div class="row seg" id="conn"><span style="min-width:58px;font-weight:bold">Connect</span>
+      <button data-m="B" class="on">common-B (V<sub>GB</sub>, V<sub>CB</sub>)</button><button data-m="C">common-C (V<sub>GC</sub>, V<sub>CB</sub>)</button></div>
+    <div class="row"><label id="gLab">V<sub>GB</sub></label><input type="range" id="sG" min="-2" max="5" step="0.01" value="-0.70"><span class="val" id="vG"></span></div>
+    <div class="row"><label>V<sub>CB</sub></label><input type="range" id="sC" min="0" max="3" step="0.01" value="0"><span class="val" id="vC"></span></div>
+    <div class="row"><b style="min-width:58px">Steps</b>
+      <button data-p="a">(a) V<sub>GB</sub> = V<sub>FB</sub></button><button data-p="b">(b) raise V<sub>GB</sub></button><button data-p="c">(c) add V<sub>CB</sub></button><button data-p="d">(d) restore</button></div>
+    <div class="row"><b style="min-width:58px">Animate</b>
+      <button id="aG">sweep V<sub>GB</sub></button><button id="aC">raise V<sub>CB</sub> at fixed V<sub>GC</sub></button>
+      <button class="warn" id="reset">Reset</button></div>
+    <details><summary><b>What to notice</b></summary><ol>
+      <li>(a)→(b): raising V<sub>GB</sub> lowers the barrier from n<sup>+</sup>; electrons flow in and the surface inverts.</li>
+      <li>(b)→(c): V<sub>CB</sub> lowers E<sub>c</sub> of n<sup>+</sup> by eV<sub>CB</sub>; the barrier grows and the inversion layer thins.</li>
+      <li>(c)→(d): raising φ<sub>s</sub> by V<sub>CB</sub> restores the same barrier and the same n<sub>surface</sub>.</li>
+      <li>In the plots every curve moves right with V<sub>CB</sub>; on the deep-depletion line V<sub>CB</sub> has no effect.</li>
+      <li>Common-C: holding V<sub>GC</sub> and raising V<sub>CB</sub> reduces |Q′<sub>inv</sub>| (the body effect).</li>
+    </ol></details>
+    <div class="note" style="margin-top:6px">Charge-sheet model with the exact Q′<sub>s</sub>(φ<sub>s</sub>, V<sub>CB</sub>); V<sub>FB</sub> = −0.70 V, γ = 0.53 V<sup>1/2</sup>, V<sub>bi</sub>(n<sup>+</sup>p) = 0.99 V. Small reverse currents are neglected.</div>
+  </div>
+</div>
+<script>
+// ------------------------------------------------------------------ physics (Neamen notation)
+const q=1.602e-19, kT=0.02585, ni=1.5e10, eps0=8.854e-14, es=11.7*eps0, eox=3.9*eps0;
+const Na=1e17, tox=10e-7, Cox=eox/tox, phifp=kT*Math.log(Na/ni), VFB=-0.70, A=Math.sqrt(2*q*es*Na), gam=A/Cox;
+const Nd_np=1e20, Vbi=kT*Math.log(Na*Nd_np/ni/ni), phiZ=6*kT;
+function F(ps,vcb){ return kT*Math.exp(-ps/kT)+ps-kT+Math.exp(-(2*phifp+vcb)/kT)*(kT*Math.exp(ps/kT)-ps-kT); }
+function Qs(ps,vcb){ return -Math.sign(ps)*A*Math.sqrt(Math.max(F(ps,vcb),0)); }
+function Qad(ps){ return -Math.sign(ps)*A*Math.sqrt(Math.max(kT*Math.exp(-ps/kT)+ps-kT,0)); }
+function VGBof(ps,vcb){ return VFB+ps-Qs(ps,vcb)/Cox; }
+function psOf(vgb,vcb){ let lo=-1.2, hi=7; for(let i=0;i<80;i++){ const m=(lo+hi)/2; (VGBof(m,vcb)>vgb)?hi=m:lo=m; } return (lo+hi)/2; }
+function Qinv(ps,vcb){ return Qs(ps,vcb)-Qad(ps); }
+function Cs(ps,vcb){ const h=1e-5, p=Math.abs(ps)<2*h?2*h:ps; return -(Qs(p+h,vcb)-Qs(p-h,vcb))/(2*h); }
+function VnoInv(ps){ return VFB+ps+gam*Math.sqrt(ps); }
+function xdOf(ps){ return ps>0? Math.sqrt(2*es*ps/(q*Na)) : 0; }   // cm
+// ------------------------------------------------------------------ state
+let S={vgb:VFB, vcb:0, mode:'B', vgcHold:null}, tab='ps', anim=null;
+const $=id=>document.getElementById(id);
+function fmt(x,d=3){ return (x>=0?'+':'')+x.toFixed(d); }
+function sci(x){ if(x===0) return '0'; const e=Math.floor(Math.log10(Math.abs(x))), m=x/Math.pow(10,e); return m.toFixed(2)+'×10'+sup(e); }
+function sup(e){ const m={'-':'⁻','0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹'}; return String(e).split('').map(c=>m[c]).join(''); }
+// ------------------------------------------------------------------ canvas helpers
+function prep(c){ const r=window.devicePixelRatio||1, w=c.clientWidth, h=c.height/ (c._r||1); if(!c._h) c._h=c.height; c.width=w*r; c.height=c._h*r; c.style.height=c._h+'px'; const x=c.getContext('2d'); x.setTransform(r,0,0,r,0,0); x.clearRect(0,0,w,c._h); return [x,w,c._h]; }
+function txt(x,s,X,Y,o={}){ x.save(); x.fillStyle=o.c||'#3c3c3b'; x.font=(o.b?'bold ':'')+(o.it?'italic ':'')+(o.s||11)+'px Arial'; x.textAlign=o.a||'left'; x.textBaseline=o.v||'middle'; x.fillText(s,X,Y); x.restore(); }
+function line(x,pts,o={}){ x.save(); x.strokeStyle=o.c||'#000'; x.lineWidth=o.w||1.4; x.setLineDash(o.d||[]); x.beginPath(); pts.forEach((p,i)=>i?x.lineTo(p[0],p[1]):x.moveTo(p[0],p[1])); x.stroke(); x.restore(); }
+function arrow(x,x0,y0,x1,y1,c,both){ line(x,[[x0,y0],[x1,y1]],{c:c,w:1.1}); const head=(xa,ya,xb,yb)=>{ const a=Math.atan2(yb-ya,xb-xa); x.save(); x.fillStyle=c; x.beginPath(); x.moveTo(xb,yb); x.lineTo(xb-7*Math.cos(a-0.4),yb-7*Math.sin(a-0.4)); x.lineTo(xb-7*Math.cos(a+0.4),yb-7*Math.sin(a+0.4)); x.fill(); x.restore(); }; head(x0,y0,x1,y1); if(both) head(x1,y1,x0,y0); }
+// ------------------------------------------------------------------ device drawing
+function drawDev(st){
+  const [x,w,h]=prep($('cDev'));
+  const L=w-150, X0=130, Y0=95, H=150;     // body box
+  const sc=H/0.30e-4;                         // px per cm (0.30 µm full height)
+  const xg0=X0+0.24*L, xg1=X0+L-6;
+  // circuit
+  const Gx=(xg0+xg1)/2, Cx=X0+0.09*L, By=Y0+H+30;
+  line(x,[[Gx,Y0-26],[Gx,Y0-48],[30,Y0-48],[30,By],[X0+L/2,By],[X0+L/2,Y0+H+6]],{c:'#000',w:1.1});
+  line(x,[[Cx,Y0-8],[Cx,Y0-30],[85,Y0-30],[85,By]],{c:'#000',w:1.1});
+  const src=(cx,cy,lab,val)=>{ x.save(); x.fillStyle='#fff'; x.strokeStyle='#000'; x.lineWidth=1.1; x.beginPath(); x.arc(cx,cy,11,0,7); x.fill(); x.stroke(); x.restore(); txt(x,'+',cx,cy-4,{a:'center',s:10}); txt(x,'−',cx,cy+5,{a:'center',s:10}); txt(x,lab,cx-14,cy-8,{a:'right',s:11,b:1}); txt(x,val,cx-14,cy+7,{a:'right',s:10,c:'#1f8dd6'}); };
+  if(st.mode==='B'){ src(30,Y0+70,'V_GB'.replace('_',''),st.vgb.toFixed(2)+' V'); src(85,Y0+105,'VCB',st.vcb.toFixed(2)+' V'); }
+  else { // common C: V_GC between C-node and gate
+    line(x,[[30,Y0-48],[30,Y0+60]],{c:'#000',w:1.1}); src(30,Y0+20,'VGC',(st.vgb-st.vcb).toFixed(2)+' V'); src(85,Y0+105,'VCB',st.vcb.toFixed(2)+' V');
+    line(x,[[30,Y0+50],[85,Y0+50]],{c:'#000',w:1.1}); }
+  // body
+  x.fillStyle='#eeeeee'; x.fillRect(X0,Y0,L,H); x.strokeStyle='#000'; x.lineWidth=1; x.strokeRect(X0,Y0,L,H);
+  x.fillStyle='#c8c8c8'; x.fillRect(X0,Y0+H,L,6); x.strokeRect(X0,Y0+H,L,6);
+  // depletion: n+ (one-sided junction) and gate
+  const Wj=Math.sqrt(2*es*(Vbi+st.vcb)/(q*Na))*sc, xd=Math.min(xdOf(st.ps)*sc,H-8);
+  const nW=0.16*L, nD=26;
+  x.fillStyle='#dcebf8'; x.beginPath();
+  x.moveTo(X0,Y0); x.lineTo(X0, Y0+nD+Wj); x.lineTo(X0+nW-10, Y0+nD+Wj); x.quadraticCurveTo(X0+nW+Wj, Y0+nD+Wj, X0+nW+Wj, Y0);
+  x.closePath(); x.fill();
+  if(xd>0){ x.fillRect(xg0-8, Y0, xg1-xg0+14, xd); }
+  x.save(); x.strokeStyle='#1f8dd6'; x.setLineDash([4,3]); x.lineWidth=1; x.beginPath(); x.moveTo(X0, Y0+nD+Wj); x.lineTo(X0+nW-10, Y0+nD+Wj); x.quadraticCurveTo(X0+nW+Wj, Y0+nD+Wj, X0+nW+Wj, Y0+Math.min(xd,nD+Wj)); if(xd>0){ x.moveTo(xg0-8,Y0+xd); x.lineTo(xg1+6,Y0+xd);} x.stroke(); x.restore();
+  // acceptors
+  for(let px=X0+8; px<X0+L-4; px+=17){ const inN=px<X0+nW+4; const dep= inN? (nD+Wj) : (px<xg0-8? (Wj+nD)*Math.max(0,1-(px-X0-nW)/(Wj+12)) : Math.max(xd, (Wj+nD)*Math.max(0,1-(px-X0-nW)/(Wj+12))));
+    for(let py=Y0+(inN?nD+9:9); py<Y0+dep-3; py+=15){ if(st.qi>2e-9 && py<Y0+10 && !inN) continue; x.strokeStyle='#1f8dd6'; x.lineWidth=.8; x.beginPath(); x.arc(px,py,4.2,0,7); x.stroke(); line(x,[[px-2.4,py],[px+2.4,py]],{c:'#1f8dd6',w:.9}); } }
+  // n+ region
+  x.save(); x.fillStyle='#a6a6a6'; x.beginPath(); x.moveTo(X0,Y0); x.lineTo(X0+nW,Y0); x.quadraticCurveTo(X0+nW,Y0+nD,X0+nW-14,Y0+nD); x.lineTo(X0,Y0+nD); x.closePath(); x.fill(); x.strokeStyle='#000'; x.stroke(); x.restore();
+  txt(x,'n⁺',X0+nW/2,Y0+nD/2,{a:'center',b:1,s:12,c:'#fff'});
+  x.fillStyle='#b3b3b3'; x.fillRect(Cx-10,Y0-8,20,8); x.strokeRect(Cx-10,Y0-8,20,8);
+  // oxide + gate
+  x.fillStyle='#fff'; x.fillRect(xg0-8,Y0-8,xg1-xg0+14,8); x.strokeRect(xg0-8,Y0-8,xg1-xg0+14,8);
+  x.save(); x.strokeStyle='#999'; x.lineWidth=.6; for(let k=xg0-6;k<xg1+4;k+=5){ x.beginPath(); x.moveTo(k,Y0); x.lineTo(k+5,Y0-8); x.stroke(); } x.restore();
+  x.fillStyle='#b3b3b3'; x.fillRect(xg0,Y0-26,xg1-xg0,18); x.strokeStyle='#000'; x.strokeRect(xg0,Y0-26,xg1-xg0,18);
+  const qm=-st.qs, ng=Math.min(30,Math.round(Math.abs(qm)/2.2e-8));
+  for(let k=0;k<ng;k++){ const gx=xg0+8+k*(xg1-xg0-16)/Math.max(ng-1,1); txt(x,qm>0?'+':'−',gx,Y0-17,{a:'center',b:1,c:qm>0?'#d0312d':'#1f4e99',s:12}); }
+  // inversion electrons / accumulation holes
+  const ne=Math.min(40,Math.round(Math.abs(st.qi)/1.5e-8)+(Math.abs(st.qi)>1e-10?1:0));
+  for(let k=0;k<ne;k++){ const ex=xg0+4+k*(xg1-xg0-8)/Math.max(ne-1,1); line(x,[[ex-3,Y0+4],[ex+3,Y0+4]],{c:'#1f4e99',w:2.6}); }
+  if(st.ps<-0.02){ const nh=Math.min(30,Math.round(Math.abs(st.qs)/2.2e-8)); for(let k=0;k<nh;k++){ const ex=xg0+6+k*(xg1-xg0-12)/Math.max(nh-1,1); txt(x,'+',ex,Y0+5,{a:'center',b:1,c:'#d0312d',s:11}); } }
+  // terminals
+  const term=(tx,ty,s)=>{ x.fillStyle='#fff'; x.beginPath(); x.arc(tx,ty,8,0,7); x.fill(); x.stroke(); txt(x,s,tx,ty,{a:'center',s:10,b:1}); };
+  term(Gx,Y0-37,'G'); term(Cx,Y0-19,'C'); term(X0+L/2,Y0+H+18,'B');
+  txt(x,'p',X0+L-14,Y0+H-14,{it:1,s:13});
+  txt(x,'x_d = '+(xdOf(st.ps)*1e4).toFixed(3)+' µm',xg1-4,Y0+Math.max(xd,10)+11,{a:'right',s:10,c:'#1f8dd6'});
+}
+// ------------------------------------------------------------------ barrier along the surface
+function drawBar(st){
+  const [x,w,h]=prep($('cBar'));
+  const l=46, r=w-60, t=26, b=h-30;
+  const emin=Math.min(-0.45,-st.vcb-0.35, Vbi-st.ps-0.35), emax=Vbi+0.35, Y=e=>t+(emax-e)/(emax-emin)*(b-t), xs=[...Array(161).keys()].map(i=>l+i*(r-l)/160);
+  line(x,[[l,t-6],[l,b],[r+6,b]],{c:'#000',w:1});
+  txt(x,'E_c at the surface (eV)'.replace('_c','c'),l-8,t-14,{s:10});
+  txt(x,'n⁺',l+0.18*(r-l),b+12,{a:'center',b:1}); txt(x,'p surface (under the gate)',l+0.7*(r-l),b+12,{a:'center'});
+  const prof=(lo,hi)=>xs.map(px=>{ const u=(px-l)/(r-l); return [px, Y(lo+(hi-lo)*(0.5+0.5*Math.tanh((u-0.36)/0.045)))]; });
+  // energies: reference = n+ E_c at V_CB=0 is 0; bulk p E_c = +Vbi
+  const surf0=Vbi-st.ps;              // surface Ec with V_CB = 0 reference
+  line(x,prof(0,Vbi-st.ps0),{c:'#bbb',w:1.4,d:[5,4]});
+  line(x,prof(-st.vcb,surf0),{c:'#1f4e99',w:2.4});
+  // annotations
+  const xa=l+0.6*(r-l);
+  line(x,[[l+0.05*(r-l),Y(-st.vcb)],[xa-6,Y(-st.vcb)]],{c:'#d0312d',w:.8,d:[2,3]});
+  const bar=Vbi+st.vcb-st.ps;
+  arrow(x,xa,Y(-st.vcb),xa,Y(surf0),'#1f4e99',true);
+  txt(x,'barrier = '+bar.toFixed(2)+' eV',xa+6,(Y(-st.vcb)+Y(surf0))/2,{c:'#1f4e99',b:1});
+  if(st.vcb>0.005){ const xc=l+0.08*(r-l); arrow(x,xc,Y(0),xc,Y(-st.vcb),'#d0312d',true); txt(x,'eV_CB'.replace('_',''),xc+6,(Y(0)+Y(-st.vcb))/2,{c:'#d0312d'}); line(x,[[l,Y(0)],[l+0.3*(r-l),Y(0)]],{c:'#d0312d',w:.6,d:[3,3]}); }
+  // electron dots: density ~ exp(-barrier/kT) (log scale count)
+  const lg=Math.max(0,Math.min(1,(Math.log10(Math.max(st.ns,1))-4)/16));
+  const nd=Math.round(lg*22);
+  for(let k=0;k<nd;k++){ const ex=l+0.52*(r-l)+((k*37)%100)/100*0.42*(r-l), ey=Y(surf0)-5-((k*53)%7); x.fillStyle='#1f8dd6'; x.beginPath(); x.arc(ex,ey,2.4,0,7); x.fill(); }
+  for(let k=0;k<14;k++){ const ex=l+0.04*(r-l)+((k*41)%100)/100*0.24*(r-l), ey=Y(-st.vcb)-5-((k*29)%6); x.fillStyle='#1f8dd6'; x.beginPath(); x.arc(ex,ey,2.4,0,7); x.fill(); }
+  txt(x,'n_surface ≈ '.replace('_surface','ₛ')+sci(st.ns)+' cm⁻³',r-2,t+4,{a:'right',s:11,b:1,c:'#1f4e99'});
+}
+// ------------------------------------------------------------------ bands vs depth
+function drawBand(st){
+  const [x,w,h]=prep($('cBand'));
+  const l=20, r=w-52, t=12, b=h-24;
+  const xmax=0.32e-4, X=d=>l+d/xmax*(r-l);
+  const emin=-4.3, emax=0.9, Y=e=>t+(emax-e)/(emax-emin)*(b-t);
+  const xd=xdOf(st.ps), N=200, pts=[...Array(N+1).keys()].map(i=>i*xmax/N);
+  const phi=d=> st.ps>0 ? (d<xd? st.ps*(1-d/xd)**2 : 0) : st.ps*Math.exp(-d/0.004e-4);
+  const Ei=pts.map(d=>[X(d),Y(-phi(d))]), Ec=pts.map(d=>[X(d),Y(0.56-phi(d))]), Ev=pts.map(d=>[X(d),Y(-0.56-phi(d))]);
+  x.fillStyle='#dcdcdc'; x.beginPath(); x.moveTo(X(0),Y(emin)); Ev.forEach(p=>x.lineTo(p[0],p[1])); x.lineTo(X(xmax),Y(emin)); x.closePath(); x.fill();
+  line(x,Ec,{c:'#000',w:1.6}); line(x,Ev,{c:'#000',w:1.6}); line(x,Ei,{c:'#000',w:1,d:[6,3,2,3]});
+  line(x,[[X(0),Y(-phifp)],[X(xmax),Y(-phifp)]],{c:'#000',w:1.2,d:[5,4]});
+  const efn=-phifp-st.vcb; const xe=Math.max(xd*1.15,0.02e-4);
+  if(st.vcb>0.005){ line(x,[[X(0),Y(efn)],[X(xe),Y(efn)]],{c:'#d0312d',w:1.4,d:[5,3]}); txt(x,'E_Fn'.replace('_',''),X(xe)+4,Y(efn),{c:'#d0312d',s:11}); arrow(x,X(xe*0.75),Y(-phifp),X(xe*0.75),Y(efn),'#d0312d',true); txt(x,'eVCB',X(xe*0.75)+5,(Y(-phifp)+Y(efn))/2,{c:'#d0312d',s:10}); }
+  txt(x,'Ec',r+4,Y(0.56),{s:11}); txt(x,'EFi',r+4,Y(0),{s:11}); txt(x,st.vcb>0.005?'EFp':'EF',r+4,Y(-phifp)-6,{s:11}); txt(x,'Ev',r+4,Y(-0.56)+7,{s:11});
+  if(st.ps>0.01){ const xa=X(Math.min(xmax*0.88, xd+0.03e-4)); line(x,[[X(0),Y(-st.ps)],[xa,Y(-st.ps)]],{c:'#1f8dd6',w:.8,d:[2,3]}); arrow(x,xa,Y(0),xa,Y(-st.ps),'#1f8dd6',true); txt(x,'eφs = '+st.ps.toFixed(2)+' eV',xa+5,Y(-st.ps/2),{c:'#1f8dd6',s:10}); }
+  // E_Fn - E_Fi at the surface
+  const d0=efn-(-st.ps); arrow(x,X(0)+8,Y(-st.ps),X(0)+8,Y(efn),'#1f4e99',true);
+  txt(x,'EFn − EFi = '+fmt(d0,2)+' eV',X(0)+14,Y(Math.min(efn,-st.ps))+12,{c:'#1f4e99',s:10,b:1});
+  line(x,[[l,t],[l,b]],{c:'#000',w:1.6}); txt(x,'depth into Si, x →',(l+r)/2,b+13,{a:'center',s:10});
+}
+// ------------------------------------------------------------------ plots vs VGB
+let curveCache={};
+function curves(vcb){ const k=vcb.toFixed(2); if(curveCache[k]) return curveCache[k]; const v=[],p=[],qi=[],c=[]; for(let g=-2;g<=5.0001;g+=0.02){ const ps=psOf(g,vcb); v.push(g); p.push(ps); qi.push(Math.abs(Qinv(ps,vcb))); c.push(1/(1/Cox+1/Cs(ps,vcb))/Cox); } return curveCache[k]={v,p,qi,c}; }
+function drawPlot(st){
+  const [x,w,h]=prep($('cPlot'));
+  const l=56, r=w-12, t=26, b=h-30;
+  const c0=curves(0), c1=curves(st.vcb);
+  let get, ylo, yhi, lab, logy=false;
+  if(tab==='ps'){ get=c=>c.p; ylo=-0.3; yhi=4.2; lab='φs (V)'; }
+  if(tab==='q'){ get=c=>c.qi.map(v=>v*1e6); ylo=0; yhi=1.2; lab='|Q′inv| (µC/cm²)'; }
+  if(tab==='lq'){ get=c=>c.qi.map(v=>Math.log10(Math.max(v,1e-20))); ylo=-16; yhi=-5.5; lab='log₁₀|Q′inv| (C/cm²)'; logy=true; }
+  if(tab==='c'){ get=c=>c.c; ylo=0; yhi=1.1; lab="C′/Cox (LF = HF here)"; }
+  const X=v=>l+(v+2)/7*(r-l), Y=y=>b-(Math.min(Math.max(y,ylo),yhi)-ylo)/(yhi-ylo)*(b-t);
+  x.strokeStyle='#eee'; x.lineWidth=1;
+  for(let g=-2; g<=5; g++){ line(x,[[X(g),t],[X(g),b]],{c:'#eee',w:1}); txt(x,String(g),X(g),b+10,{a:'center',s:10}); }
+  const ny=5; for(let i=0;i<=ny;i++){ const yy=ylo+i*(yhi-ylo)/ny; line(x,[[l,Y(yy)],[r,Y(yy)]],{c:'#eee',w:1}); txt(x,logy? yy.toFixed(0): yy.toFixed(tab==='ps'?1:2),l-4,Y(yy),{a:'right',s:10}); }
+  line(x,[[l,t],[l,b],[r,b]],{c:'#000',w:1});
+  txt(x,lab,l,t-14,{s:11,b:1}); txt(x,'VGB (V)',r,b+22,{a:'right',s:10});
+  if(tab==='ps'){ const sa=c0.v.map(g=>{ const v=Math.max(g-VFB,0); return (-gam/2+Math.sqrt(gam*gam/4+v))**2; }); line(x,c0.v.map((g,i)=>[X(g),Y(sa[i])]),{c:'#000',w:.8,d:[3,3]}); txt(x,'φsa (deep depletion)',X(4.1),Y(3.9),{s:9,c:'#666',a:'right'}); }
+  line(x,c0.v.map((g,i)=>[X(g),Y(get(c0)[i])]),{c:'#6f9bd1',w:1.6,d:[6,4]});
+  line(x,c1.v.map((g,i)=>[X(g),Y(get(c1)[i])]),{c:'#1f4e99',w:2.2});
+  // VLB, VMB markers
+  [[VnoInv(phifp+st.vcb),'VLB'],[VnoInv(2*phifp+st.vcb),'VMB']].forEach(([v,s])=>{ line(x,[[X(v),t],[X(v),b]],{c:'#aaa',w:1,d:[2,3]}); txt(x,s,X(v)+2,t+6,{s:9,c:'#888'}); });
+  line(x,[[X(VFB),t],[X(VFB),b]],{c:'#aaa',w:1,d:[2,3]}); txt(x,'VFB',X(VFB)+2,t+6,{s:9,c:'#888'});
+  const yv= tab==='ps'? st.ps : tab==='q'? Math.abs(st.qi)*1e6 : tab==='lq'? Math.log10(Math.max(Math.abs(st.qi),1e-20)) : st.cg;
+  x.fillStyle='#d0312d'; x.beginPath(); x.arc(X(st.vgb),Y(yv),4.5,0,7); x.fill();
+}
+// ------------------------------------------------------------------ update
+function region(ps,vcb){ if(ps<-0.005) return 'accumulation'; if(ps<0.005) return 'flat band'; if(ps<phifp+vcb) return 'depletion'; if(ps<2*phifp+vcb) return 'weak inversion'; if(ps<2*phifp+vcb+phiZ) return 'moderate inversion'; return 'strong inversion'; }
+function update(){
+  const st=Object.assign({},S);
+  st.ps=psOf(st.vgb,st.vcb); st.ps0=psOf(st.vgb,0); st.qs=Qs(st.ps,st.vcb); st.qi=Qinv(st.ps,st.vcb); st.qd=st.qs-st.qi;
+  st.ns=Na*Math.exp((st.ps-(2*phifp+st.vcb))/kT); st.cg=1/(1/Cox+1/Cs(st.ps,st.vcb))/Cox;
+  $('sG').value = S.mode==='B'? st.vgb : st.vgb-st.vcb; $('sC').value=st.vcb;
+  $('vG').textContent=(S.mode==='B'? st.vgb : st.vgb-st.vcb).toFixed(2)+' V'; $('vC').textContent=st.vcb.toFixed(2)+' V';
+  $('rVGB').textContent=st.vgb.toFixed(2)+' V'; $('rVCB').textContent=st.vcb.toFixed(2)+' V'; $('rVGC').textContent=(st.vgb-st.vcb).toFixed(2)+' V';
+  $('rPs').textContent=st.ps.toFixed(3)+' V'; $('rPsC').textContent=(st.ps-st.vcb).toFixed(3)+' V'; $('rNs').textContent=sci(st.ns)+' cm⁻³';
+  $('rQi').textContent=sci(st.qi)+' C/cm²'; $('rQd').textContent=sci(st.qd)+' C/cm²'; $('rXd').textContent=(xdOf(st.ps)*1e4).toFixed(4)+' µm';
+  $('rBar').textContent=(Vbi+st.vcb-st.ps).toFixed(3)+' eV'; $('rVLB').textContent=VnoInv(phifp+st.vcb).toFixed(2)+' V'; $('rVMB').textContent=VnoInv(2*phifp+st.vcb).toFixed(2)+' V';
+  const rg=region(st.ps,st.vcb); $('rMode').textContent=rg; $('badge').textContent=(S.mode==='B'?'common-B':'common-C')+' · '+rg;
+  $('rEq').innerHTML='V<sub>GB</sub> = V<sub>FB</sub> + φ<sub>s</sub> − Q′<sub>s</sub>/C<sub>ox</sub> : '+st.vgb.toFixed(2)+' = '+VFB.toFixed(2)+' + '+st.ps.toFixed(2)+' + '+(-st.qs/Cox).toFixed(2);
+  drawDev(st); drawBar(st); drawBand(st); drawPlot(st);
+}
+// ------------------------------------------------------------------ controls
+function stop(){ if(anim){ cancelAnimationFrame(anim); anim=null; } }
+$('sG').addEventListener('input',e=>{ stop(); const v=+e.target.value; S.vgb = S.mode==='B'? v : v+S.vcb; update(); });
+$('sC').addEventListener('input',e=>{ stop(); const v=+e.target.value; if(S.mode==='C'){ const vgc=S.vgb-S.vcb; S.vcb=v; S.vgb=vgc+v; } else S.vcb=v; update(); });
+document.querySelectorAll('#conn button').forEach(bt=>bt.addEventListener('click',()=>{ S.mode=bt.dataset.m; document.querySelectorAll('#conn button').forEach(o=>o.classList.toggle('on',o===bt)); $('gLab').innerHTML= S.mode==='B'?'V<sub>GB</sub>':'V<sub>GC</sub>'; $('sG').min= S.mode==='B'?-2:-2; $('sG').max= S.mode==='B'?5:5; update(); }));
+document.querySelectorAll('#tabs button').forEach(bt=>bt.addEventListener('click',()=>{ tab=bt.dataset.k; document.querySelectorAll('#tabs button').forEach(o=>o.classList.toggle('on',o===bt)); update(); }));
+const VGB1=0.8, VCBc=1.0;
+function preset(p){ stop(); if(p==='a'){ S.vgb=VFB; S.vcb=0; } if(p==='b'){ S.vgb=VGB1; S.vcb=0; } if(p==='c'){ S.vgb=VGB1; S.vcb=VCBc; }
+  if(p==='d'){ const ps1=psOf(VGB1,0); S.vcb=VCBc; S.vgb=VGBof(ps1+VCBc,VCBc); } update(); }
+document.querySelectorAll('[data-p]').forEach(bt=>bt.addEventListener('click',()=>preset(bt.dataset.p)));
+$('aG').addEventListener('click',()=>{ stop(); let g=-1.5; const step=()=>{ S.vgb=g; update(); g+=0.03; if(g<=4.5) anim=requestAnimationFrame(step); else anim=null; }; step(); });
+$('aC').addEventListener('click',()=>{ stop(); if(S.mode!=='C') document.querySelector('#conn button[data-m=C]').click(); const vgc=Math.max(S.vgb-S.vcb,1.2); let c=0; const step=()=>{ S.vcb=c; S.vgb=vgc+c; update(); c+=0.01; if(c<=3) anim=requestAnimationFrame(step); else anim=null; }; step(); });
+$('reset').addEventListener('click',()=>{ stop(); S={vgb:VFB,vcb:0,mode:'B'}; document.querySelector('#conn button[data-m=B]').click(); });
+window.addEventListener('resize',update);
+update();
+</script>
+</body>
+</html>
