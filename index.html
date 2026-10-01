@@ -274,6 +274,7 @@ $('aC').addEventListener('click',()=>{ stop(); if(S.mode!=='C') document.querySe
 $('reset').addEventListener('click',()=>{ stop(); S={vgb:VFB,vcb:0,mode:'B'}; document.querySelector('#conn button[data-m=B]').click(); });
 window.addEventListener('resize',update);
 update();
+if(/^#[abcd]$/.test(location.hash)) preset(location.hash.slice(1));
 </script>
 </body>
 </html>
